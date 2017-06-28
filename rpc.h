@@ -49,6 +49,17 @@ extractCorners(const std::string& imd_fname);
 
 template <typename T>
 T* first(std::vector<T>& v) { return (&(v[0])); }
+
+
+
+void
+llh2sl_single(normalizer_type*  off_scl,
+              coefficient_type* coeffs,
+              ground_coord_type lon,
+              ground_coord_type lat,
+              ground_coord_type hae,
+              image_coord_type& samp,
+              image_coord_type& line);
                     
 
 }; // namespace RPC

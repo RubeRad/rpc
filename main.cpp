@@ -17,16 +17,20 @@ main(int argc, char** argv) {
    else
       cout << "RPB file not OK\n";
 
-   vector<ground_coord_type> cnrs;
+   vector<ground_coord_type> gcnrs;
    if (argc >= 3)
-      cnrs = extractCorners(argv[2]);
-   if (cnrs.empty())
+      gcnrs = extractCorners(argv[2]);
+   if (gcnrs.empty())
       cout << "IMD file not OK\n";
    else 
       cout << "IMD file OK\n";
 
-   double* c = first(cnrs);
-   for (size_t i=0; i<cnrs.size(); i++) {
-      cout << i << "\t" << c[i] << endl;
+   ground_coord_type* gc = first(gcnrs);
+   vector<image_coord_type> icnrs(8,0);
+   image_coord_type* ic = first(icnrs);
+   e = rpc.llh2sl(gcnrs.size(), gc, ic);
+   for (size_t i=0; i<icnrs.size(); ++i) {
+      cout << icnrs[i] << endl;
    }
+   
 }
