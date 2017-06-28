@@ -1,6 +1,6 @@
-CC   = g++
-EXE  = rpc
-OBJS = rpc.o main.o
+CC       = g++ 
+EXE      = rpc
+OBJS     = rpc.o main.o
 
 $(EXE): $(OBJS)
 

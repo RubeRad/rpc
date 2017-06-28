@@ -2,6 +2,9 @@
 #include <iostream>
 
 using namespace RPC;
+using std::cout;
+using std::endl;
+using std::vector;
 
 int
 main(int argc, char** argv) {
@@ -10,7 +13,20 @@ main(int argc, char** argv) {
    if (argc >= 2)
       e = rpc.init(argv[1]);
    if (IS_OK(e))
-      std::cout << "OK\n";
+      cout << "RPB file OK\n";
    else
-      std::cout << "Not OK\n";
+      cout << "RPB file not OK\n";
+
+   vector<ground_coord_type> cnrs;
+   if (argc >= 3)
+      cnrs = extractCorners(argv[2]);
+   if (cnrs.empty())
+      cout << "IMD file not OK\n";
+   else 
+      cout << "IMD file OK\n";
+
+   double* c = first(cnrs);
+   for (size_t i=0; i<cnrs.size(); i++) {
+      cout << i << "\t" << c[i] << endl;
+   }
 }

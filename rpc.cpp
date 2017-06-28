@@ -12,6 +12,7 @@ using std::istream;
 using std::ifstream;
 using std::cout;
 using std::endl;
+using std::vector;
 
 
 errorType
@@ -72,3 +73,41 @@ RPC::RPC::init(const string& fname)
    return init(istr);
 }
 
+
+
+vector<ground_coord_type>
+RPC::extractCorners(const string& imd_fname) {
+   vector<ground_coord_type> cnrs(12, 0.0);
+   ifstream istr(imd_fname.c_str());
+
+   string line, key, eq, val;
+   do {
+      line.clear();
+      getline(istr, line);
+      //cout << "line: " << line << endl;
+   } while (line.length() &&
+            line.find("BEGIN_GROUP") == std::string::npos);
+   
+   do {
+      key.clear();
+      val.clear();
+      istr >> key >> eq >> val;
+      //cout << key << " " << eq << " " << val << endl;
+      double v = atof(val.c_str());
+      if      (key=="ULLon")  cnrs[0]  = v; 
+      else if (key=="ULLat")  cnrs[1]  = v; 
+      else if (key=="ULHAE")  cnrs[2]  = v; 
+      else if (key=="URLon")  cnrs[3]  = v; 
+      else if (key=="URLat")  cnrs[4]  = v; 
+      else if (key=="URHAE")  cnrs[5]  = v; 
+      else if (key=="LRLon")  cnrs[6]  = v; 
+      else if (key=="LRLat")  cnrs[7]  = v; 
+      else if (key=="LRHAE")  cnrs[8]  = v; 
+      else if (key=="LLLon")  cnrs[9]  = v; 
+      else if (key=="LLLat")  cnrs[10] = v; 
+      else if (key=="LLHAE")  cnrs[11] = v;
+   }
+   while (key != "END_GROUP" && val.length());
+
+   return cnrs;
+}

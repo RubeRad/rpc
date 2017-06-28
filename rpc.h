@@ -3,6 +3,7 @@
 
 #include <istream>
 #include <string>
+#include <vector>
 
 namespace RPC {
 
@@ -11,10 +12,10 @@ typedef int errorType;
 #define IS_SUCCESS(e) ((e)==0)
 #define IS_FAILURE(e) ((e)<0)
 
-typedef double point2[2]; // ALWAYS X,Y   (samp,line)
-typedef double point3[3]; // ALWAYS X,Y,Z (lon, lat, hae)
 typedef double normalizer_type;
 typedef double coefficient_type; // TBD sometimes float
+typedef double ground_coord_type;
+typedef double image_coord_type; // TBD sometimes float
 
 class RPC {
  public:
@@ -30,16 +31,25 @@ class RPC {
 
    errorType
    llh2sl(size_t  n,
-          point3* llh,  // lon,lat,hae (deg/m)
-          point2* sl);  // samp,line
+          ground_coord_type* llh,  // 3n array of lon,lat,hae (deg/m)
+          image_coord_type*  sl);  // preallocated 2n array for samp,line
 
-   // HAE prepopulated in input/output param llh!
+   // llh is input/output: preallocated 3n, prepopulated with HAEs
    errorType
    slh2ll(size_t  n,
-          point2* sl,   // samp,line
-          point3* llh); // lon,lat, hae (deg)
+          image_coord_type*  sl,   // 2n array of samp,line
+          ground_coord_type* llh); // preallocated 3n array for lon,lat, hae (deg)
 
 }; // class RPC::RPC
+
+
+// will return length 12 vector, (lon,lat,hae)X(UL,UR,LR,LL)
+std::vector<ground_coord_type>
+extractCorners(const std::string& imd_fname);
+
+template <typename T>
+T* first(std::vector<T>& v) { return (&(v[0])); }
+                    
 
 }; // namespace RPC
 
