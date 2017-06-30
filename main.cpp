@@ -28,7 +28,7 @@ main(int argc, char** argv) {
    ground_coord_type* gc = first(gcnrs);
    vector<image_coord_type> icnrs(8,0);
    image_coord_type* ic = first(icnrs);
-   e = rpc.llh2sl(gcnrs.size(), gc, ic);
+   e = rpc.llh2sl(4, gc, ic);
    for (size_t i=0; i<icnrs.size(); ++i) {
       cout << icnrs[i] << endl;
    }

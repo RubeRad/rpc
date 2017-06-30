@@ -1,6 +1,10 @@
-CC       = g++ 
+#LD       = g++
+CC       = g++ # why doesn't LD=g++ work?
+CPPFLAGS = -g
 EXE      = rpc
 OBJS     = rpc.o main.o
+
+all: $(EXE)
 
 $(EXE): $(OBJS)
 
