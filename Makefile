@@ -1,16 +1,18 @@
-#LD       = g++
-CC       = g++ # why doesn't LD=g++ work?
-CPPFLAGS = -g
-EXE      = rpc
-OBJS     = rpc.o main.o
+CPPFLAGS = -isystem $(GTEST_DIR)/include
+CXXFLAGS = -g -std=c++11 -Wall -Wextra -pthread
+OBJS     = rpc.o gtestrpc.o
 
-all: $(EXE)
-
-$(EXE): $(OBJS)
+all: gtestrpc
 
 rpc.o: rpc.cpp rpc.h
 
-main.o: main.cpp rpc.h
+gtestrpc.o: gtestrpc.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(GTEST_DIR)/include -c $^
+
+gtestrpc: rpc.o gtestrpc.o
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@ $(GTEST_DIR)/make/gtest_main.a
+
+
 
 clean:
-	rm -rf $(EXE) $(OBJS)
+	rm -rf gtestrpc $(OBJS)

@@ -43,10 +43,6 @@ class RPC {
 }; // class RPC::RPC
 
 
-// will return length 12 vector, (lon,lat,hae)X(UL,UR,LR,LL)
-std::vector<ground_coord_type>
-extractCorners(const std::string& imd_fname);
-
 template <typename T>
 T* first(std::vector<T>& v) { return (&(v[0])); }
 
