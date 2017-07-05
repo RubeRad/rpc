@@ -13,43 +13,80 @@ using std::vector;
 using std::string;
 using std::ifstream;
 
-vector<ground_coord_type>
-extractCorners(const string& imd_fname) {
+void
+extractCorners(const string& imd_fname,
+               vector<ground_coord_type>& gcnrs,
+               vector<image_coord_type>&  icnrs)
+{
+   gcnrs.clear();
+   icnrs.clear();
+   ifstream istr(imd_fname.c_str());
+   long nrows=-1, ncols=-1;
+   string key, eq, val;
+
+   do {
+      key.clear();
+      istr >> key;
+      if        (key == "numRows") {
+         istr >> eq >> nrows;
+      } else if (key == "numColumns") {
+         istr >> eq >> ncols;
+      }
+   } while (key.length() &&
+            key != "BEGIN_GROUP");
+   getline(istr, key); // clear the rest of BEGIN_GROUP line
+
+   if (nrows < 0 || ncols < 0)
+      return; // empty vectors ==> failure
+
+   image_coord_type ip;
+   ip.s[0] = 0;
+   ip.s[1] = 0;
+   icnrs.push_back(ip);
+   ip.s[0] = ncols-1;
+   icnrs.push_back(ip);
+   ip.s[1] = nrows-1;
+   icnrs.push_back(ip);
+   ip.s[0] = 0;
+   icnrs.push_back(ip);
+   
    // TBD: why can't I use initializing constructors?
    ground_coord_type gp;// = (cl_double3)(0.0,0.0,0.0);
-   vector<ground_coord_type> cnrs(4, gp);
-   ifstream istr(imd_fname.c_str());
+   gcnrs = vector<ground_coord_type>(4, gp);
 
-   string line, key, eq, val;
-   do {
-      line.clear();
-      getline(istr, line);
-      //cout << "line: " << line << endl;
-   } while (line.length() &&
-            line.find("BEGIN_GROUP") == std::string::npos);
-   
    do {
       key.clear();
       val.clear();
       istr >> key >> eq >> val;
       //cout << key << " " << eq << " " << val << endl;
       double v = atof(val.c_str());
-      if      (key=="ULLon")  cnrs[0].s[0] = v; 
-      else if (key=="ULLat")  cnrs[0].s[1] = v; 
-      else if (key=="ULHAE")  cnrs[0].s[2] = v; 
-      else if (key=="URLon")  cnrs[1].s[0] = v; 
-      else if (key=="URLat")  cnrs[1].s[1] = v; 
-      else if (key=="URHAE")  cnrs[1].s[2] = v; 
-      else if (key=="LRLon")  cnrs[2].s[0] = v; 
-      else if (key=="LRLat")  cnrs[2].s[1] = v; 
-      else if (key=="LRHAE")  cnrs[2].s[2] = v; 
-      else if (key=="LLLon")  cnrs[3].s[0] = v; 
-      else if (key=="LLLat")  cnrs[3].s[1] = v; 
-      else if (key=="LLHAE")  cnrs[3].s[2] = v;
+      if      (key=="ULLon")
+         gcnrs[0].s[0] = v; 
+      else if (key=="ULLat")
+         gcnrs[0].s[1] = v; 
+      else if (key=="ULHAE")
+         gcnrs[0].s[2] = v; 
+      else if (key=="URLon")
+         gcnrs[1].s[0] = v; 
+      else if (key=="URLat")
+         gcnrs[1].s[1] = v; 
+      else if (key=="URHAE")
+         gcnrs[1].s[2] = v; 
+      else if (key=="LRLon")
+         gcnrs[2].s[0] = v; 
+      else if (key=="LRLat")
+         gcnrs[2].s[1] = v; 
+      else if (key=="LRHAE")
+         gcnrs[2].s[2] = v; 
+      else if (key=="LLLon")
+         gcnrs[3].s[0] = v; 
+      else if (key=="LLLat")
+         gcnrs[3].s[1] = v; 
+      else if (key=="LLHAE")
+         gcnrs[3].s[2] = v;
    }
    while (key != "END_GROUP" && val.length());
 
-   return cnrs;
 }
 
 
@@ -67,14 +104,21 @@ TEST(RPC, g2iCorners) {
       ASSERT_SUCCESS(e);
 
       vector<ground_coord_type> gcnrs;
-      gcnrs = extractCorners(base+".IMD");
-      ASSERT_SUCCESS(e);
+      vector <image_coord_type> icnrs;
+      extractCorners(base+".IMD", gcnrs, icnrs);
+      ASSERT_EQ(4, gcnrs.size());
+      ASSERT_EQ(4, icnrs.size());
 
       ground_coord_type* gc = first(gcnrs);
       image_coord_type ip; //(0,0);
-      vector<image_coord_type> icnrs(4,ip);
-      image_coord_type* ic = first(icnrs);
+      vector<image_coord_type> g2is(4,ip);
+      image_coord_type* ic = first(g2is);
       e = rpc.llh2sl(4, gc, ic);
       EXPECT_SUCCESS(e);
+
+      for (size_t i=0; i<gcnrs.size(); ++i) {
+         EXPECT_NEAR(icnrs[i].s[0], g2is[i].s[0], 0.5);
+         EXPECT_NEAR(icnrs[i].s[1], g2is[i].s[1], 0.5);
+      }
    }
 }
