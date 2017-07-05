@@ -15,7 +15,9 @@ using std::ifstream;
 
 vector<ground_coord_type>
 extractCorners(const string& imd_fname) {
-   vector<ground_coord_type> cnrs(12, 0.0);
+   // TBD: why can't I use initializing constructors?
+   ground_coord_type gp;// = (cl_double3)(0.0,0.0,0.0);
+   vector<ground_coord_type> cnrs(4, gp);
    ifstream istr(imd_fname.c_str());
 
    string line, key, eq, val;
@@ -32,18 +34,18 @@ extractCorners(const string& imd_fname) {
       istr >> key >> eq >> val;
       //cout << key << " " << eq << " " << val << endl;
       double v = atof(val.c_str());
-      if      (key=="ULLon")  cnrs[0]  = v; 
-      else if (key=="ULLat")  cnrs[1]  = v; 
-      else if (key=="ULHAE")  cnrs[2]  = v; 
-      else if (key=="URLon")  cnrs[3]  = v; 
-      else if (key=="URLat")  cnrs[4]  = v; 
-      else if (key=="URHAE")  cnrs[5]  = v; 
-      else if (key=="LRLon")  cnrs[6]  = v; 
-      else if (key=="LRLat")  cnrs[7]  = v; 
-      else if (key=="LRHAE")  cnrs[8]  = v; 
-      else if (key=="LLLon")  cnrs[9]  = v; 
-      else if (key=="LLLat")  cnrs[10] = v; 
-      else if (key=="LLHAE")  cnrs[11] = v;
+      if      (key=="ULLon")  cnrs[0].s[0] = v; 
+      else if (key=="ULLat")  cnrs[0].s[1] = v; 
+      else if (key=="ULHAE")  cnrs[0].s[2] = v; 
+      else if (key=="URLon")  cnrs[1].s[0] = v; 
+      else if (key=="URLat")  cnrs[1].s[1] = v; 
+      else if (key=="URHAE")  cnrs[1].s[2] = v; 
+      else if (key=="LRLon")  cnrs[2].s[0] = v; 
+      else if (key=="LRLat")  cnrs[2].s[1] = v; 
+      else if (key=="LRHAE")  cnrs[2].s[2] = v; 
+      else if (key=="LLLon")  cnrs[3].s[0] = v; 
+      else if (key=="LLLat")  cnrs[3].s[1] = v; 
+      else if (key=="LLHAE")  cnrs[3].s[2] = v;
    }
    while (key != "END_GROUP" && val.length());
 
@@ -69,7 +71,8 @@ TEST(RPC, g2iCorners) {
       ASSERT_SUCCESS(e);
 
       ground_coord_type* gc = first(gcnrs);
-      vector<image_coord_type> icnrs(8,0);
+      image_coord_type ip; //(0,0);
+      vector<image_coord_type> icnrs(4,ip);
       image_coord_type* ic = first(icnrs);
       e = rpc.llh2sl(4, gc, ic);
       EXPECT_SUCCESS(e);

@@ -75,13 +75,14 @@ RPC::RPC::init(const string& fname)
 
 errorType
 RPC::RPC::llh2sl(size_t n,
-                 ground_coord_type* llh,  // 3n array of lon,lat,hae (deg/m)
-                 image_coord_type*  sl)   // preallocated 2n array for samp,line
+                 ground_coord_type* llh, // n-array of lon,lat,hae (deg/m) triplets
+                 image_coord_type*  sl)  // preallocated n-array for samp,line duplets
 {
    for (size_t i=0; i<n; ++i) {
+      // TBD: Why can't I use cl_double3.x, .y, .z?
       llh2sl_single(&off_scl[0], &coeffs[0],
-                    llh[i*3], llh[i*3+1], llh[i*3+2],
-                     sl[i*2],  sl[i*2+1]);
+                    llh[i].s[0], llh[i].s[1], llh[i].s[2],
+                     sl[i].s[0],  sl[i].s[1]);
    }
    return 0;
 }
@@ -91,46 +92,43 @@ RPC::RPC::llh2sl(size_t n,
 void
 RPC::llh2sl_single(normalizer_type*  off_scl,
                    coefficient_type* coeffs,
-                   ground_coord_type lon,
-                   ground_coord_type lat,
-                   ground_coord_type hae,
-                   image_coord_type& samp,
-                   image_coord_type& line)
+                   double  lon,
+                   double  lat,
+                   double  hae,
+                   double& samp,
+                   double& line)
 {
    // normalize the input ground point
-   image_coord_type x = (image_coord_type)(lon - off_scl[0]) / off_scl[5];
-   image_coord_type y = (image_coord_type)(lat - off_scl[1]) / off_scl[6];
-   image_coord_type z = (image_coord_type)(hae - off_scl[2]) / off_scl[7];
-   image_coord_type xx=x*x, yy=y*y, zz=z*z, xy=x*y, xz=x*z, yz=y*z;
-   image_coord_type xxx=xx*x, xxy=xx*y, xxz=xx*z,
-                     xyy=x*yy, yyy=yy*y, yyz=yy*z,
-                     xzz=x*zz, yzz=y*zz, zzz=zz*z, xyz=x*y*z;
+   double x = (lon - off_scl[0]) / off_scl[5];
+   double y = (lat - off_scl[1]) / off_scl[6];
+   double z = (hae - off_scl[2]) / off_scl[7];
+   double xx=x*x, yy=y*y, zz=z*z, xy=x*y, xz=x*z, yz=y*z;
    
-   image_coord_type sampn=0, sampd=0, linen=0, lined=0;
+   double sampn=0, sampd=0, linen=0, lined=0;
    // accumulate in reverse order, adding smallest terms first
    for (int i=19; i>=0; --i) {
-      image_coord_type term;
+      double term;
       switch(i) {
-      case  0: term =   1; break;
-      case  1: term =   x; break;
-      case  2: term =   y; break;
-      case  3: term =   z; break;
-      case  4: term =  xy; break;
-      case  5: term =  xz; break;
-      case  6: term =  yz; break;
-      case  7: term =  xx; break;
-      case  8: term =  yy; break;
-      case  9: term =  zz; break;
-      case 10: term = xyz; break;
-      case 11: term = xxx; break;
-      case 12: term = xyy; break;
-      case 13: term = xzz; break;
-      case 14: term = xxy; break;
-      case 15: term = yyy; break;
-      case 16: term = yzz; break;
-      case 17: term = xxz; break;
-      case 18: term = yyz; break;
-      case 19: term = zzz; break;
+      case  0: term =    1; break;
+      case  1: term =    x; break;
+      case  2: term =    y; break;
+      case  3: term =    z; break;
+      case  4: term =   xy; break;
+      case  5: term =   xz; break;
+      case  6: term =   yz; break;
+      case  7: term =   xx; break;
+      case  8: term =   yy; break;
+      case  9: term =   zz; break;
+      case 10: term = xy*z; break;
+      case 11: term = xx*x; break;
+      case 12: term = xy*y; break;
+      case 13: term = xz*z; break;
+      case 14: term = xx*y; break;
+      case 15: term = yy*y; break;
+      case 16: term = yz*z; break;
+      case 17: term = xx*z; break;
+      case 18: term = yy*z; break;
+      case 19: term = zz*z; break;
       }
       // coeff groups are lineNum, lineDen, sampNum, sampDen as per RPB file
       linen += term * coeffs[i];
@@ -139,13 +137,13 @@ RPC::llh2sl_single(normalizer_type*  off_scl,
       sampd += term * coeffs[i+60];
    }
 
-   image_coord_type soff=(image_coord_type)off_scl[3];
-   image_coord_type loff=(image_coord_type)off_scl[4];
-   image_coord_type sscl=(image_coord_type)off_scl[8];
-   image_coord_type lscl=(image_coord_type)off_scl[9];
+   double soff = off_scl[3];
+   double loff = off_scl[4];
+   double sscl = off_scl[8];
+   double lscl = off_scl[9];
    if (sampd == 0 || lined == 0) {
-      samp = (image_coord_type)-1e10;
-      line = (image_coord_type)-1e10;
+      samp = -1e10;
+      line = -1e10;
    } else {
       samp = sampn / sampd * sscl + soff;
       line = linen / lined * lscl + loff;

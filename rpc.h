@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <CL/cl.h>
+
 namespace RPC {
 
 typedef int errorType;
@@ -12,10 +14,10 @@ typedef int errorType;
 #define IS_SUCCESS(e) ((e)==0)
 #define IS_FAILURE(e) ((e)<0)
 
-typedef double normalizer_type;
-typedef double coefficient_type; // TBD sometimes float
-typedef double ground_coord_type;
-typedef double image_coord_type; // TBD sometimes float
+typedef double  normalizer_type;
+typedef double  coefficient_type; // TBD sometimes float
+typedef cl_double3 ground_coord_type;
+typedef cl_double2 image_coord_type; // TBD sometimes float
 
 class RPC {
  public:
@@ -31,14 +33,14 @@ class RPC {
 
    errorType
    llh2sl(size_t  n,
-          ground_coord_type* llh,  // 3n array of lon,lat,hae (deg/m)
-          image_coord_type*  sl);  // preallocated 2n array for samp,line
+          ground_coord_type* llh,  // n-array of lon,lat,hae (deg/m) triplets
+          image_coord_type*  sl);  // preallocated n-array for samp,line duplets
 
-   // llh is input/output: preallocated 3n, prepopulated with HAEs
+   // llh is input/output: preallocated, prepopulated with HAEs
    errorType
    slh2ll(size_t  n,
-          image_coord_type*  sl,   // 2n array of samp,line
-          ground_coord_type* llh); // preallocated 3n array for lon,lat, hae (deg)
+          image_coord_type*  sl,   // n-array of samp,line duplets
+          ground_coord_type* llh); // preallocated n-array for lon,lat,hae (deg)
 
 }; // class RPC::RPC
 
@@ -51,11 +53,11 @@ T* first(std::vector<T>& v) { return (&(v[0])); }
 void
 llh2sl_single(normalizer_type*  off_scl,
               coefficient_type* coeffs,
-              ground_coord_type lon,
-              ground_coord_type lat,
-              ground_coord_type hae,
-              image_coord_type& samp,
-              image_coord_type& line);
+              double  lon,
+              double  lat,
+              double  hae,
+              double& samp,
+              double& line);
                     
 
 }; // namespace RPC
