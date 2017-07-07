@@ -109,26 +109,26 @@ RPC::llh2sl_single(normalizer_type*  off_scl,
    for (int i=19; i>=0; --i) {
       double term;
       switch(i) {
-      case  0: term =    1; break;
-      case  1: term =    x; break;
-      case  2: term =    y; break;
-      case  3: term =    z; break;
-      case  4: term =   xy; break;
-      case  5: term =   xz; break;
-      case  6: term =   yz; break;
-      case  7: term =   xx; break;
-      case  8: term =   yy; break;
-      case  9: term =   zz; break;
-      case 10: term = xy*z; break;
-      case 11: term = xx*x; break;
-      case 12: term = xy*y; break;
-      case 13: term = xz*z; break;
-      case 14: term = xx*y; break;
-      case 15: term = yy*y; break;
-      case 16: term = yz*z; break;
-      case 17: term = xx*z; break;
-      case 18: term = yy*z; break;
-      case 19: term = zz*z; break;
+      case COEFF_1:   term =    1; break;
+      case COEFF_X:   term =    x; break;
+      case COEFF_Y:   term =    y; break;
+      case COEFF_Z:   term =    z; break;
+      case COEFF_XY:  term =   xy; break;
+      case COEFF_XZ:  term =   xz; break;
+      case COEFF_YZ:  term =   yz; break;
+      case COEFF_XX:  term =   xx; break;
+      case COEFF_YY:  term =   yy; break;
+      case COEFF_ZZ:  term =   zz; break;
+      case COEFF_XYZ: term = xy*z; break;
+      case COEFF_XXX: term = xx*x; break;
+      case COEFF_XYY: term = xy*y; break;
+      case COEFF_XZZ: term = xz*z; break;
+      case COEFF_XXY: term = xx*y; break;
+      case COEFF_YYY: term = yy*y; break;
+      case COEFF_YZZ: term = yz*z; break;
+      case COEFF_XXZ: term = xx*z; break;
+      case COEFF_YYZ: term = yy*z; break;
+      case COEFF_ZZZ: term = zz*z; break;
       }
       // coeff groups are lineNum, lineDen, sampNum, sampDen as per RPB file
       linen += term * coeffs[i];
