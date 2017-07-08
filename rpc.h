@@ -19,6 +19,19 @@ typedef double  coefficient_type; // TBD sometimes float
 typedef cl_double3 ground_coord_type;
 typedef cl_double2 image_coord_type; // TBD sometimes float
 
+
+enum scl_off_enum {
+   OFFX=0,
+   OFFY,
+   OFFZ,
+   OFFS,
+   OFFL,
+   SCLX,
+   SCLY,
+   SCLZ,
+   SCLS,
+   SCLL,
+};
 enum coeff_enum {
    COEFF_1=0,  // 0
    COEFF_X,    // 1
@@ -81,6 +94,12 @@ llh2sl_single(normalizer_type*  off_scl,
               double  hae,
               double& samp,
               double& line);
+
+void
+g2ipartials(normalizer_type* off_scl,
+            coefficient_type* coeffs,
+            const cl_double3& llh,
+            cl_double8& sl_part);
                     
 
 }; // namespace RPC

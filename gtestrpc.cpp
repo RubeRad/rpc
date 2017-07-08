@@ -106,6 +106,17 @@ TEST(RPC, g2iCorners) {
       for (size_t i=0; i<gcnrs.size(); ++i) {
          EXPECT_NEAR(icnrs[i].x, g2is[i].x, 0.5);
          EXPECT_NEAR(icnrs[i].y, g2is[i].y, 0.5);
+      
+         cl_double8 sl_part, sl_part2;
+         g2ipartials(&rpc.off_scl[0], &rpc.coeffs[0], gcnrs[i], sl_part);
+         EXPECT_NEAR(g2is[i].x, sl_part.x, 1.0e-12);
+         EXPECT_NEAR(g2is[i].y, sl_part.y, 1.0e-12);
+
+         ground_coord_type perturb = gcnrs[i];
+         perturb.x += 0.00001; // about 1m
+         g2ipartials(&rpc.off_scl[0], &rpc.coeffs[0], perturb, sl_part2);
+         //image_coord_type dimg;
+         
       }
    }
 }
