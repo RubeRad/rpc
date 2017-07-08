@@ -79,10 +79,9 @@ RPC::RPC::llh2sl(size_t n,
                  image_coord_type*  sl)  // preallocated n-array for samp,line duplets
 {
    for (size_t i=0; i<n; ++i) {
-      // TBD: Why can't I use cl_double3.x, .y, .z?
       llh2sl_single(&off_scl[0], &coeffs[0],
-                    llh[i].s[0], llh[i].s[1], llh[i].s[2],
-                     sl[i].s[0],  sl[i].s[1]);
+                    llh[i].x, llh[i].y, llh[i].z,
+                     sl[i].x,  sl[i].y);
    }
    return 0;
 }

@@ -40,17 +40,16 @@ extractCorners(const string& imd_fname,
       return; // empty vectors ==> failure
 
    image_coord_type ip;
-   ip.s[0] = 0;
-   ip.s[1] = 0;
+   ip.x = 0;
+   ip.y = 0;
    icnrs.push_back(ip);
-   ip.s[0] = ncols-1;
+   ip.x = ncols-1;
    icnrs.push_back(ip);
-   ip.s[1] = nrows-1;
+   ip.y = nrows-1;
    icnrs.push_back(ip);
-   ip.s[0] = 0;
+   ip.x = 0;
    icnrs.push_back(ip);
    
-   // TBD: why can't I use initializing constructors?
    ground_coord_type gp;// = (cl_double3)(0.0,0.0,0.0);
    gcnrs = vector<ground_coord_type>(4, gp);
 
@@ -60,30 +59,18 @@ extractCorners(const string& imd_fname,
       istr >> key >> eq >> val;
       //cout << key << " " << eq << " " << val << endl;
       double v = atof(val.c_str());
-      if      (key=="ULLon")
-         gcnrs[0].s[0] = v; 
-      else if (key=="ULLat")
-         gcnrs[0].s[1] = v; 
-      else if (key=="ULHAE")
-         gcnrs[0].s[2] = v; 
-      else if (key=="URLon")
-         gcnrs[1].s[0] = v; 
-      else if (key=="URLat")
-         gcnrs[1].s[1] = v; 
-      else if (key=="URHAE")
-         gcnrs[1].s[2] = v; 
-      else if (key=="LRLon")
-         gcnrs[2].s[0] = v; 
-      else if (key=="LRLat")
-         gcnrs[2].s[1] = v; 
-      else if (key=="LRHAE")
-         gcnrs[2].s[2] = v; 
-      else if (key=="LLLon")
-         gcnrs[3].s[0] = v; 
-      else if (key=="LLLat")
-         gcnrs[3].s[1] = v; 
-      else if (key=="LLHAE")
-         gcnrs[3].s[2] = v;
+      if      (key=="ULLon")  gcnrs[0].x = v; 
+      else if (key=="ULLat")  gcnrs[0].y = v; 
+      else if (key=="ULHAE")  gcnrs[0].z = v; 
+      else if (key=="URLon")  gcnrs[1].x = v; 
+      else if (key=="URLat")  gcnrs[1].y = v; 
+      else if (key=="URHAE")  gcnrs[1].z = v; 
+      else if (key=="LRLon")  gcnrs[2].x = v; 
+      else if (key=="LRLat")  gcnrs[2].y = v; 
+      else if (key=="LRHAE")  gcnrs[2].z = v; 
+      else if (key=="LLLon")  gcnrs[3].x = v; 
+      else if (key=="LLLat")  gcnrs[3].y = v; 
+      else if (key=="LLHAE")  gcnrs[3].z = v;
    }
    while (key != "END_GROUP" && val.length());
 
@@ -117,8 +104,8 @@ TEST(RPC, g2iCorners) {
       EXPECT_SUCCESS(e);
 
       for (size_t i=0; i<gcnrs.size(); ++i) {
-         EXPECT_NEAR(icnrs[i].s[0], g2is[i].s[0], 0.5);
-         EXPECT_NEAR(icnrs[i].s[1], g2is[i].s[1], 0.5);
+         EXPECT_NEAR(icnrs[i].x, g2is[i].x, 0.5);
+         EXPECT_NEAR(icnrs[i].y, g2is[i].y, 0.5);
       }
    }
 }
