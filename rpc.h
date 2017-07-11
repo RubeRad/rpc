@@ -70,13 +70,15 @@ class RPC {
    errorType
    llh2sl(size_t  n,
           ground_coord_type* llh,  // n-array of lon,lat,hae (deg/m) triplets
-          image_coord_type*  sl);  // preallocated n-array for samp,line duplets
+          image_coord_type*  sl)   // preallocated n-array for samp,line duplets
+   const;
 
    // llh is input/output: preallocated, prepopulated with HAEs
    errorType
    slh2ll(size_t  n,
           image_coord_type*  sl,   // n-array of samp,line duplets
-          ground_coord_type* llh); // preallocated n-array for lon,lat,hae (deg)
+          ground_coord_type* llh)  // preallocated n-array for lon,lat,hae (deg)
+   const;
 
 }; // class RPC::RPC
 
@@ -87,8 +89,8 @@ T* first(std::vector<T>& v) { return (&(v[0])); }
 
 
 void
-llh2sl_single(normalizer_type*  off_scl,
-              coefficient_type* coeffs,
+llh2sl_single(const normalizer_type*  off_scl,
+              const coefficient_type* coeffs,
               double  lon,
               double  lat,
               double  hae,

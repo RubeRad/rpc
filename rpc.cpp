@@ -77,6 +77,7 @@ errorType
 RPC::RPC::llh2sl(size_t n,
                  ground_coord_type* llh, // n-array of lon,lat,hae (deg/m) triplets
                  image_coord_type*  sl)  // preallocated n-array for samp,line duplets
+const
 {
    for (size_t i=0; i<n; ++i) {
       llh2sl_single(&off_scl[0], &coeffs[0],
@@ -89,8 +90,8 @@ RPC::RPC::llh2sl(size_t n,
 
 // TBD turn into an openCL kernel
 void
-RPC::llh2sl_single(normalizer_type*  off_scl,
-                   coefficient_type* coeffs,
+RPC::llh2sl_single(const normalizer_type*  off_scl,
+                   const coefficient_type* coeffs,
                    double  lon,
                    double  lat,
                    double  hae,
@@ -168,8 +169,8 @@ RPC::g2ipartials(normalizer_type* off_scl,
      double t, tdx, tdy, tdz; // terms x^?y^?z^?, and their x,y,z partials
      switch(i) {
        case COEFF_1:   t=1;    tdx=0;    tdy=0;    tdz=0;    break;
-       case COEFF_X:   t=x;    tdx=1;    tdy=0;    tdz=1;    break;
-       case COEFF_Y:   t=y;    tdx=0;    tdy=1;    tdz=1;    break;
+       case COEFF_X:   t=x;    tdx=1;    tdy=0;    tdz=0;    break;
+       case COEFF_Y:   t=y;    tdx=0;    tdy=1;    tdz=0;    break;
        case COEFF_Z:   t=z;    tdx=0;    tdy=0;    tdz=1;    break;
        case COEFF_XY:  t=xy;   tdx=y;    tdy=x;    tdz=0;    break;
        case COEFF_XZ:  t=xz;   tdx=z;    tdy=0;    tdz=x;    break;
@@ -202,12 +203,12 @@ RPC::g2ipartials(normalizer_type* off_scl,
    } else {
       sl_part.x    =                 sn / sd   * off_scl[SCLS] + off_scl[OFFS];
       sl_part.y    =                 ln / ld   * off_scl[SCLL] + off_scl[OFFL];
-      sl_part.s[2] = (sn*sddx + sd*sndx)/sd/sd * off_scl[SCLS] / off_scl[OFFX];
-      sl_part.s[3] = (sn*sddy + sd*sndy)/sd/sd * off_scl[SCLS] / off_scl[OFFY];
-      sl_part.s[4] = (sn*sddz + sd*sndz)/sd/sd * off_scl[SCLS] / off_scl[OFFZ];
-      sl_part.s[5] = (ln*lddx + ld*lndx)/ld/ld * off_scl[SCLL] / off_scl[OFFX];
-      sl_part.s[6] = (ln*lddy + ld*lndy)/ld/ld * off_scl[SCLL] / off_scl[OFFY];
-      sl_part.s[7] = (ln*lddz + ld*lndz)/ld/ld * off_scl[SCLL] / off_scl[OFFZ];
+      sl_part.s[2] = (sn*sddx + sd*sndx)/sd/sd * off_scl[SCLS] / off_scl[SCLX];
+      sl_part.s[3] = (sn*sddy + sd*sndy)/sd/sd * off_scl[SCLS] / off_scl[SCLY];
+      sl_part.s[4] = (sn*sddz + sd*sndz)/sd/sd * off_scl[SCLS] / off_scl[SCLZ];
+      sl_part.s[5] = (ln*lddx + ld*lndx)/ld/ld * off_scl[SCLL] / off_scl[SCLX];
+      sl_part.s[6] = (ln*lddy + ld*lndy)/ld/ld * off_scl[SCLL] / off_scl[SCLY];
+      sl_part.s[7] = (ln*lddz + ld*lndz)/ld/ld * off_scl[SCLL] / off_scl[SCLZ];
    }
 }
 

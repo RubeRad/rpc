@@ -76,6 +76,30 @@ extractCorners(const string& imd_fname,
 
 }
 
+cl_double8
+g2i_partials_numerical(const RPC::RPC& rpc,
+                       const ground_coord_type& gp)
+{
+   ground_coord_type gps[4];
+   image_coord_type  ips[4];
+   for (int i=0; i<4; ++i)
+      gps[i] = gp;
+   double dh = 0.000001, dv = 0.1;
+   gps[1].x += dh;
+   gps[2].y += dh;
+   gps[3].z += dv;
+   rpc.llh2sl(4, &gps[0], &ips[0]);
+
+   cl_double8 ansa;
+   ansa.x = ips[0].x;
+   ansa.y = ips[0].y;
+   ansa.s2 = (ips[1].x-ips[0].x)/dh;  ansa.s5 = (ips[1].y-ips[0].y)/dh; // ds/dX, dl/dX
+   ansa.s3 = (ips[2].x-ips[0].x)/dh;  ansa.s6 = (ips[2].y-ips[0].y)/dh; // ds/dY, dl/dY
+   ansa.s4 = (ips[3].x-ips[0].x)/dv;  ansa.s7 = (ips[3].y-ips[0].y)/dv; // ds/dZ, dl/dZ
+
+   return ansa;
+}
+
 
 TEST(RPC, g2iCorners) {
    vector<string> bases;
@@ -107,16 +131,23 @@ TEST(RPC, g2iCorners) {
          EXPECT_NEAR(icnrs[i].x, g2is[i].x, 0.5);
          EXPECT_NEAR(icnrs[i].y, g2is[i].y, 0.5);
       
-         cl_double8 sl_part, sl_part2;
+         cl_double8 sl_part, sl_part_num;
          g2ipartials(&rpc.off_scl[0], &rpc.coeffs[0], gcnrs[i], sl_part);
          EXPECT_NEAR(g2is[i].x, sl_part.x, 1.0e-12);
          EXPECT_NEAR(g2is[i].y, sl_part.y, 1.0e-12);
 
-         ground_coord_type perturb = gcnrs[i];
-         perturb.x += 0.00001; // about 1m
-         g2ipartials(&rpc.off_scl[0], &rpc.coeffs[0], perturb, sl_part2);
-         //image_coord_type dimg;
-         
+         sl_part_num = g2i_partials_numerical(rpc, gcnrs[i]);
+
+         EXPECT_NEAR(sl_part_num.s[0], sl_part.s[0], 1.0e-12); // samp
+         EXPECT_NEAR(sl_part_num.s[1], sl_part.s[1], 1.0e-12); // line
+
+         double onepct = fabs(sl_part_num.s[2] / 100);
+         EXPECT_NEAR(sl_part_num.s[2], sl_part.s[2], onepct);
+         EXPECT_NEAR(0,                sl_part.s[3], onepct);
+         EXPECT_NEAR(0,                sl_part.s[4], onepct);
+         EXPECT_NEAR(0,                sl_part.s[5], onepct*10);
+         EXPECT_NEAR(sl_part_num.s[6], sl_part.s[6], onepct);
+         EXPECT_NEAR(0,                sl_part.s[7], onepct);
       }
    }
 }
