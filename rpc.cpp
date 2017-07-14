@@ -212,3 +212,51 @@ RPC::g2ipartials(normalizer_type* off_scl,
    }
 }
 
+
+void
+RPC::i2g_dlt(const coefficient_type* coeffs,
+             double  s, double l,   // normalized image coords
+             double  z,             // normalized ground Z
+             double& x,   // solve for normalized ground X
+             double& y)   //                         and Y
+{
+   // using just the DLT (linear) coefficients plug in Z, solve rest for X,Y
+   //      a + bx + cy (+coeff*z)           g + hx + iy (+coeff*z)
+   // l = ------------------------     s = ------------------------
+   //      d + ex + fy (+coeff*z)           j + kx + my (+coeff*z)
+   //
+   double a=coeffs[COEFF_1]    + z*coeffs[COEFF_Z],    b=coeffs[COEFF_X],    c=coeffs[COEFF_Y];
+   double d=coeffs[COEFF_1+20] + z*coeffs[COEFF_Z+20], e=coeffs[COEFF_X+20], f=coeffs[COEFF_Y+20];
+   double g=coeffs[COEFF_1+40] + z*coeffs[COEFF_Z+40], h=coeffs[COEFF_X+40], i=coeffs[COEFF_Y+40];
+   double j=coeffs[COEFF_1+60] + z*coeffs[COEFF_Z+60], k=coeffs[COEFF_X+60], m=coeffs[COEFF_Y+60];
+
+   // switch equations to put sample=imgx first; north-up imgs will be like [1,0;0;-1]
+   // sj + skx + smy = g + hx + iy ==> (h-sk)x + (i-sm)y = sj-g;
+   // ld + lex + lfy = a + bx + cy ==> (b-le)x + (c-lf)y = ld-a;
+   double mat00 = h-s*k,   mat01 = i-s*m,   rhs0 = s*j-g;
+   double mat10 = b-l*e,   mat11 = c-l*f,   rhs1 = l*d-a;
+   double det = mat00*mat11 - mat01*mat10; // north-up will be like -1
+   if (det == 0.0) {
+      x = -1e-10;
+      y = -1e-10;
+   } else {
+      double swap = mat00;  // swap the diagonals
+      mat00 = mat11;
+      mat11 = swap;
+      mat10 *= -1;    // negate the off-diagonals
+      mat01 *= -1;
+      //mat00 /= det;
+      //mat01 /= det;
+      //mat10 /= det;
+      //mat11 /= det;
+      x = (mat00*rhs0 + mat01*rhs1) / det;
+      y = (mat01*rhs0 + mat11*rhs1) / det;
+
+      double testl = (a + b*x + c*y) / (d + e*x + f*y); 
+      double tests = (g + h*x + i*y) / (j + k*x + m*y);
+      testl -= l;
+      tests -= s;
+      int stophere=1;
+      stophere++;
+   }
+}

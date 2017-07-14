@@ -54,6 +54,7 @@ enum coeff_enum {
    COEFF_YYZ,  // 18
    COEFF_ZZZ,  // 19
 };
+   
 
 class RPC {
  public:
@@ -102,6 +103,13 @@ g2ipartials(normalizer_type* off_scl,
             coefficient_type* coeffs,
             const cl_double3& llh,
             cl_double8& sl_part);
+
+void
+i2g_dlt(const coefficient_type* coeffs,
+        double nix, double niy, // normalized image coords
+        double ngz,             // normalized ground Z
+        double& ngx,  // solve for normalized ground X
+        double& ngy); //                         and Y
                     
 
 }; // namespace RPC

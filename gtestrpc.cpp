@@ -148,6 +148,34 @@ TEST(RPC, g2iCorners) {
          EXPECT_NEAR(0,                sl_part.s[5], onepct*10);
          EXPECT_NEAR(sl_part_num.s[6], sl_part.s[6], onepct);
          EXPECT_NEAR(0,                sl_part.s[7], onepct);
+
+         double norml = (icnrs[i].x - rpc.off_scl[OFFS]) / rpc.off_scl[SCLS];
+         double norms = (icnrs[i].y - rpc.off_scl[OFFL]) / rpc.off_scl[SCLL];
+         double normz = (gcnrs[i].z - rpc.off_scl[OFFZ]) / rpc.off_scl[SCLZ];
+         double normx, normy;
+         i2g_dlt(rpc.coeffs, norml, norms, normz, normx, normy);
+         double dltx = normx * rpc.off_scl[SCLX] + rpc.off_scl[OFFX];
+         double dlty = normy * rpc.off_scl[SCLY] + rpc.off_scl[OFFY];
+         double rtl = ( rpc.coeffs[COEFF_1   ] +
+                        rpc.coeffs[COEFF_X   ] * normx +
+                        rpc.coeffs[COEFF_Y   ] * normy +
+                        rpc.coeffs[COEFF_Z   ] * normz ) /
+                      ( rpc.coeffs[COEFF_1+20] +
+                        rpc.coeffs[COEFF_X+20] * normx +
+                        rpc.coeffs[COEFF_Y+20] * normy +
+                        rpc.coeffs[COEFF_Z+20] * normz );
+         double rts = ( rpc.coeffs[COEFF_1+40] +
+                        rpc.coeffs[COEFF_X+40] * normx +
+                        rpc.coeffs[COEFF_Y+40] * normy +
+                        rpc.coeffs[COEFF_Z+40] * normz ) /
+                      ( rpc.coeffs[COEFF_1+60] +
+                        rpc.coeffs[COEFF_X+60] * normx +
+                        rpc.coeffs[COEFF_Y+60] * normy +
+                        rpc.coeffs[COEFF_Z+60] * normz );
+         EXPECT_NEAR(norml, rtl, 1.0e-12);
+         EXPECT_NEAR(norms, rts, 1.0e-12);
+         EXPECT_NEAR(gcnrs[i].x, dltx, 1.0e-4); // ~ 10m
+         EXPECT_NEAR(gcnrs[i].y, dlty, 1.0e-4);
       }
    }
 }
