@@ -78,13 +78,14 @@ extractCorners(const string& imd_fname,
 
 cl_double8
 g2i_partials_numerical(const RPC::RPC& rpc,
-                       const ground_coord_type& gp)
+                       const ground_coord_type& gp,
+                       double step_scl=1.0)
 {
    ground_coord_type gps[4];
    image_coord_type  ips[4];
    for (int i=0; i<4; ++i)
       gps[i] = gp;
-   double dh = 0.000001, dv = 0.1;
+   double dh = 0.00001*step_scl, dv = 1.0*step_scl;
    gps[1].x += dh;
    gps[2].y += dh;
    gps[3].z += dv;
@@ -100,6 +101,15 @@ g2i_partials_numerical(const RPC::RPC& rpc,
    return ansa;
 }
 
+void EXPECT_NEAR_PCT(double shld,
+                     double isss,
+                     double pct,
+                     int index=-1,
+                     const string& lbl="")
+{
+   double tol = fabs(shld) * pct / 100.0;
+   EXPECT_NEAR(shld, isss, tol) << "index: " << index << " " << lbl;
+}
 
 TEST(RPC, g2iCorners) {
    vector<string> bases;
@@ -128,8 +138,8 @@ TEST(RPC, g2iCorners) {
       EXPECT_SUCCESS(e);
 
       for (size_t i=0; i<gcnrs.size(); ++i) {
-         EXPECT_NEAR(icnrs[i].x, g2is[i].x, 0.5);
-         EXPECT_NEAR(icnrs[i].y, g2is[i].y, 0.5);
+         EXPECT_NEAR(icnrs[i].x, g2is[i].x, 1.0) << base << " " << i << " " << gcnrs[i].x;
+         EXPECT_NEAR(icnrs[i].y, g2is[i].y, 1.0) << base << " " << i << " " << gcnrs[i].x;
       
          cl_double8 sl_part, sl_part_num;
          g2ipartials(&rpc.off_scl[0], &rpc.coeffs[0], gcnrs[i], sl_part);
@@ -138,16 +148,23 @@ TEST(RPC, g2iCorners) {
 
          sl_part_num = g2i_partials_numerical(rpc, gcnrs[i]);
 
+         double scl = 64;
+         for (int it=0; it<10; ++it) {
+            cl_double8 dum = g2i_partials_numerical(rpc, gcnrs[i], scl);
+            scl /= 2;
+            cout << "scl " << scl << "\t" << dum.s[3] << "\t" << sl_part.s[3] << endl;
+         }
+
          EXPECT_NEAR(sl_part_num.s[0], sl_part.s[0], 1.0e-12); // samp
          EXPECT_NEAR(sl_part_num.s[1], sl_part.s[1], 1.0e-12); // line
 
-         double onepct = fabs(sl_part_num.s[2] / 100);
-         EXPECT_NEAR(sl_part_num.s[2], sl_part.s[2], onepct);
-         EXPECT_NEAR(0,                sl_part.s[3], onepct);
-         EXPECT_NEAR(0,                sl_part.s[4], onepct);
-         EXPECT_NEAR(0,                sl_part.s[5], onepct*10);
-         EXPECT_NEAR(sl_part_num.s[6], sl_part.s[6], onepct);
-         EXPECT_NEAR(0,                sl_part.s[7], onepct);
+         EXPECT_NEAR_PCT(sl_part_num.s[2], sl_part.s[2], 1,  2); // ds/dx significant
+         EXPECT_NEAR_PCT(sl_part_num.s[3], sl_part.s[3], 10, 3);
+         EXPECT_NEAR_PCT(sl_part_num.s[4], sl_part.s[4], 10, 4);
+         EXPECT_NEAR_PCT(sl_part_num.s[5], sl_part.s[5], 10, 5);
+         EXPECT_NEAR_PCT(sl_part_num.s[6], sl_part.s[6], 1,  6); // dl/dy significant
+         EXPECT_NEAR_PCT(sl_part_num.s[7], sl_part.s[7], 10, 7);
+         continue;
 
          double norml = (icnrs[i].x - rpc.off_scl[OFFS]) / rpc.off_scl[SCLS];
          double norms = (icnrs[i].y - rpc.off_scl[OFFL]) / rpc.off_scl[SCLL];
@@ -179,3 +196,68 @@ TEST(RPC, g2iCorners) {
       }
    }
 }
+
+
+void test_partials(RPC::RPC& rpc, ground_coord_type gp, const string& lbl) {
+   cl_double8 prig, pnum;
+   g2ipartials(&rpc.off_scl[0], &rpc.coeffs[0], gp, prig);
+   pnum = g2i_partials_numerical(rpc, gp, 0.1);
+   EXPECT_NEAR(pnum.s[0], prig.s[0], 1.0e-12); // samp
+   EXPECT_NEAR(pnum.s[1], prig.s[1], 1.0e-12); // line
+
+   EXPECT_NEAR_PCT(pnum.s[2], prig.s[2], .1, 2, lbl); // ds/dx significant
+   EXPECT_NEAR_PCT(pnum.s[3], prig.s[3],  1, 3, lbl);
+   EXPECT_NEAR_PCT(pnum.s[4], prig.s[4],  1, 4, lbl);
+   EXPECT_NEAR_PCT(pnum.s[5], prig.s[5],  1, 5, lbl);
+   EXPECT_NEAR_PCT(pnum.s[6], prig.s[6], .1, 6, lbl); // dl/dy significant
+   EXPECT_NEAR_PCT(pnum.s[7], prig.s[7],  1, 7, lbl);
+}
+   
+
+TEST(RPC, partials) {
+   string base = "data/13DEC28032941-M1BS-053950035030_01_P001";
+   RPC::RPC rpc;
+   errorType e = rpc.init(base+".RPB");
+   ASSERT_SUCCESS(e);
+
+   ground_coord_type gp0, gpx, gpy, gpz, gpxy, gpxz, gpyz, gpxyz;
+   gp0.x = rpc.off_scl[0];
+   gp0.y = rpc.off_scl[1];
+   gp0.z = rpc.off_scl[2];
+   test_partials(rpc, gp0, "0");
+
+   gpx = gp0;
+   gpx.x += 0.001;
+   test_partials(rpc, gpx, "X");
+
+   gpy = gp0;
+   gpy.y += 0.001;
+   test_partials(rpc, gpy, "Y");
+   
+   gpz = gp0;
+   gpz.z += 100;
+   test_partials(rpc, gpz, "Z");
+
+   gpxy = gp0;
+   gpxy.x += 0.001;
+   gpxy.y += 0.001;
+   test_partials(rpc, gpxy, "XY");   
+
+   gpxz= gp0;
+   gpxz.x += 0.001;
+   gpxz.z += 100;
+   test_partials(rpc, gpxz, "XZ");   
+
+   gpyz= gp0;
+   gpyz.y += 0.001;
+   gpyz.z += 100;
+   test_partials(rpc, gpyz, "YZ");   
+
+   gpxyz= gp0;
+   gpxyz.x += 0.001;
+   gpxyz.y += 0.001;
+   gpxyz.z += 100;
+   test_partials(rpc, gpxyz, "XYZ");   
+}
+
+

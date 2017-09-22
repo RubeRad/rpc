@@ -32,26 +32,27 @@ enum scl_off_enum {
    SCLS,
    SCLL,
 };
+// RPC00B coefficient order
 enum coeff_enum {
-   COEFF_1=0,  // 0
-   COEFF_X,    // 1
-   COEFF_Y,    // 2
-   COEFF_Z,    // 3
-   COEFF_XY,   // 4
-   COEFF_XZ,   // 5
-   COEFF_YZ,   // 6
-   COEFF_XX,   // 7
-   COEFF_YY,   // 8
-   COEFF_ZZ,   // 9
-   COEFF_XYZ,  // 10
+   COEFF_1=0,  // 0 
+   COEFF_X,    // 1 
+   COEFF_Y,    // 2 
+   COEFF_Z,    // 3 
+   COEFF_XY,   // 4   RPC00A differences
+   COEFF_XZ,   // 5    |
+   COEFF_YZ,   // 6    v
+   COEFF_XX,   // 7   XYZ  
+   COEFF_YY,   // 8   XX
+   COEFF_ZZ,   // 9   YY
+   COEFF_XYZ,  // 10  ZZ
    COEFF_XXX,  // 11
-   COEFF_XYY,  // 12
-   COEFF_XZZ,  // 13
-   COEFF_XXY,  // 14
+   COEFF_XYY,  // 12  XXY
+   COEFF_XZZ,  // 13  XXZ
+   COEFF_XXY,  // 14  XYY
    COEFF_YYY,  // 15
-   COEFF_YZZ,  // 16
-   COEFF_XXZ,  // 17
-   COEFF_YYZ,  // 18
+   COEFF_YZZ,  // 16  YYZ
+   COEFF_XXZ,  // 17  XZZ
+   COEFF_YYZ,  // 18  YZZ
    COEFF_ZZZ,  // 19
 };
    
