@@ -1,5 +1,6 @@
 CPPFLAGS = -isystem $(GTEST_DIR)/include
-CXXFLAGS = -g -std=c++11 -Wall -Wextra -pthread -U__STRICT_ANSI__
+#CXXFLAGS = -g -std=c++11 -Wall -Wextra -pthread -U__STRICT_ANSI__
+CXXFLAGS = -g -Wall -Wextra -pthread -U__STRICT_ANSI__
 OBJS     = rpc.o gtestrpc.o
 
 all: gtestrpc
@@ -10,7 +11,7 @@ gtestrpc.o: gtestrpc.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(GTEST_DIR)/include -c $^
 
 gtestrpc: rpc.o gtestrpc.o
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@ $(GTEST_DIR)/make/gtest_main.a
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lgtest_main -lgtest -lpthread $^ -o $@ 
 
 
 
