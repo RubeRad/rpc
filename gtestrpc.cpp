@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <fstream>
 #include <cmath>
+#include <random>
 
 #include "rpc.hpp"
 
@@ -114,13 +115,23 @@ void EXPECT_NEAR_PCT(double shld,
    EXPECT_NEAR(shld, isss, tol) << "index: " << index << " " << lbl;
 }
 
-TEST(RPC, g2iCorners) {
-   vector<string> bases;
+std::vector<std::string>
+test_files(const std::string& ext = "")
+{
+   std::vector<std::string> bases;
    bases.push_back("data/13DEC28032941-M1BS-053950035030_01_P001");
    bases.push_back("data/13DEC28032941-P1BS-053950035030_01_P001");
    bases.push_back("data/13DEC28033039-M1BS-053950035030_01_P001");
    bases.push_back("data/13DEC28033039-P1BS-053950035030_01_P001");
+   if (ext.length())
+      for (auto& b : bases)
+         b += ext;
+   return bases;
+}
 
+
+TEST(RPC, g2iCorners) {
+   auto bases = test_files();
    for (const auto& base : bases) {
       cout << "Testing: " << base << endl;
       RPC<double> rpc;
@@ -207,6 +218,40 @@ TEST(RPC, g2iCorners) {
       } // for i
    } // for base
 } // TEST
+
+
+TEST(RPC, doubleVSfloat) {
+   std::mt19937 seed(828067); // ASCII 82 80 67 = R P C
+   std::uniform_real_distribution<double> uni(-1.0, 1.0);
+   std::vector<ground_coord_type> gps;
+   for (int i=0; i<100; ++i)
+      gps.emplace_back(uni(seed), uni(seed), uni(seed));
+
+   auto rpbs = test_files(".RPB");
+   for (const auto& rpb : rpbs) {
+      RPC<double> rpcd;
+      RPC<float>  rpcf;
+      ASSERT_SUCCESS(rpcd.init(rpb));
+      ASSERT_SUCCESS(rpcf.init(rpb));
+
+      for (const auto& gp1 : gps) {
+         imagef_coord_type ipf;
+         imaged_coord_type ipd;
+         ground_coord_type gp = gp1;
+         gp.x = gp1.x*rpcd.off_scl[SCLX] + rpcd.off_scl[OFFX];
+         gp.y = gp1.y*rpcd.off_scl[SCLY] + rpcd.off_scl[OFFY];
+         gp.z = gp1.z*rpcd.off_scl[SCLZ] + rpcd.off_scl[OFFZ];
+         
+         rpcf.g2i(gp, ipf);
+         rpcd.g2i(gp, ipd);
+         EXPECT_NEAR(ipd.x, ipf.x, 0.1);
+         EXPECT_NEAR(ipd.y, ipf.y, 0.1);
+
+         std::cout << "RPC_D_VS_F," << ipf.x << "," << ipf.y << ","
+                   << ipd.x << "," << ipd.y << std::endl;
+      }
+   }
+}
 
 
 #if 0
