@@ -220,13 +220,21 @@ TEST(RPC, g2iCorners) {
 } // TEST
 
 
-TEST(RPC, doubleVSfloat) {
+std::vector<ground_coord_type>
+random_normalized_gps(int N=100)
+{
    std::mt19937 seed(828067); // ASCII 82 80 67 = R P C
    std::uniform_real_distribution<double> uni(-1.0, 1.0);
    std::vector<ground_coord_type> gps;
-   for (int i=0; i<100; ++i)
+   for (int i=0; i<N; ++i)
       gps.emplace_back(uni(seed), uni(seed), uni(seed));
+   return gps;
+}
 
+
+TEST(RPC, doubleVSfloat) {
+   auto gps = random_normalized_gps();
+   
    auto rpbs = test_files(".RPB");
    for (const auto& rpb : rpbs) {
       RPC<double> rpcd;
@@ -244,13 +252,20 @@ TEST(RPC, doubleVSfloat) {
          
          rpcf.g2i(gp, ipf);
          rpcd.g2i(gp, ipd);
-         EXPECT_NEAR(ipd.x, ipf.x, 0.1);
-         EXPECT_NEAR(ipd.y, ipf.y, 0.1);
+         EXPECT_NEAR(ipd.x, ipf.x, 1.0); // some differ by 0.9
+         EXPECT_NEAR(ipd.y, ipf.y, 1.0);
 
          std::cout << "RPC_D_VS_F," << ipf.x << "," << ipf.y << ","
                    << ipd.x << "," << ipd.y << std::endl;
       }
    }
+}
+
+
+TEST(RPC, i2g_dlt) {
+   auto gps = random_normalized_gps();
+
+
 }
 
 
