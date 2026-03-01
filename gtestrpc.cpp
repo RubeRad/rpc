@@ -15,6 +15,29 @@ using std::vector;
 using std::string;
 using std::ifstream;
 
+class commanator {
+   std::ostream& str;
+ public:
+   commanator(std::ostream& s) : str( s ) {;}
+   template <typename T>
+   commanator& operator<<(const T& x) {
+      str << x;
+      return *this;
+   }
+   template <typename T>
+   commanator& operator>>(const T& x) {
+      str << ',' << x;
+      return *this;
+   }
+   // non-template explicit operator<< for manipulators -- thx ChatGPT!
+   commanator& operator<<(std::ostream& (*manip)(std::ostream&)) {
+      str << manip;
+      return *this;
+   }
+};
+      
+   
+
 void
 extractCorners(const string& imd_fname,
                vector<ground_coord_type>& gcnrs,
@@ -234,7 +257,8 @@ random_normalized_gps(int N=100)
 
 TEST(RPC, doubleVSfloat) {
    auto gps = random_normalized_gps();
-   
+
+   commanator csv(std::cout);
    auto rpbs = test_files(".RPB");
    for (const auto& rpb : rpbs) {
       RPC<double> rpcd;
@@ -255,8 +279,7 @@ TEST(RPC, doubleVSfloat) {
          EXPECT_NEAR(ipd.x, ipf.x, 1.0); // some differ by 0.9
          EXPECT_NEAR(ipd.y, ipf.y, 1.0);
 
-         std::cout << "RPC_D_VS_F," << ipf.x << "," << ipf.y << ","
-                   << ipd.x << "," << ipd.y << std::endl;
+         csv << "RPC_D_VS_F" >> ipf.x >> ipf.y >> ipd.x >> ipd.y << std::endl;
       }
    }
 }
