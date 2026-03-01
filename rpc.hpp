@@ -61,10 +61,10 @@ enum coeff_enum {
 
    
 // start with functions using fundamental types that can be turned into openCL kernels
+// these values lon,lat,hae,samp,line are all NORMALIZED
 template<typename T, typename GT, typename IT>
 void
-llh2sl(T* off_scl, // NUM_OFF_SCL_ENUM=10
-       T* coeffs,  // NUM_COEFF_ENUM=80
+xyz2xy(T* coeffs,  // NUM_COEFF_ENUM=80
        GT  lon,
        GT  lat,
        GT  hae,
@@ -73,9 +73,9 @@ llh2sl(T* off_scl, // NUM_OFF_SCL_ENUM=10
 {
    // if GT is double and T is float, this will normalize in double first, and
    // then truncate to float only at the end
-   T x( (lon - off_scl[OFFX]) / off_scl[SCLX] );
-   T y( (lat - off_scl[OFFY]) / off_scl[SCLY] );
-   T z( (hae - off_scl[OFFZ]) / off_scl[SCLZ] );
+   T x( lon );
+   T y( lat );
+   T z( hae );
    T xx=x*x, yy=y*y, zz=z*z, xy=x*y, xz=x*z, yz=y*z;
    
    T sampn=0, sampd=0, linen=0, lined=0;
@@ -118,15 +118,15 @@ llh2sl(T* off_scl, // NUM_OFF_SCL_ENUM=10
       line = -1e10;
    } else {
       // if T is float and IT is double, do all the arithmetic in double
-      samp = sampn;
-      samp /= sampd;
-      samp *= off_scl[SCLS];
-      samp += off_scl[OFFS];
+      samp = sampn;  // possibly float-->double
+      samp /= sampd; // ...before division
+      //samp *= off_scl[SCLS];
+      //samp += off_scl[OFFS];
 
       line = linen;
       line /= lined;
-      line *= off_scl[SCLL];
-      line += off_scl[OFFL];
+      //line *= off_scl[SCLL];
+      //line += off_scl[OFFL];
    }
 }
 
@@ -241,6 +241,42 @@ g2ipartials(T* coeffs,     // NUM_COEFF_ENUM=80
    }
 }
 
+
+// for ground points we will always use double precision
+class ground_coord_type {
+ public:
+   double x,y,z;
+   ground_coord_type(double xx=0, double yy=0, double zz=0)
+      : x(xx), y(yy), z(zz) { ; }
+   double& operator[](int i) {
+      switch(i) { case 0: return x;
+                  case 1: return y;
+                  case 2: return z; }
+      return x; // shouldn't ever happen
+   }
+};
+
+// for image points, maybe double, maybe float.  double is of course sufficient
+// precision, but float should be 7 decimal digits precise almost always, which
+// is right on the edge of sufficient for satellite imagery, with precision like
+// 99999.01 is good, but 100000.1 marginal
+template <typename T>
+class image_coord_type {
+ public:
+   T x,y;
+   image_coord_type(T xx=0, T yy=0) : x(xx), y(yy) { ; }
+   T& operator[](int i) { return (i ? y : x); }
+};
+typedef image_coord_type<double> imaged_coord_type;
+typedef image_coord_type<float>  imagef_coord_type;
+
+
+
+// NOTE: the classes ground_coord_type is only before class RPC because of
+// [de]normalize(ground_point_type); The templated
+// [de]normalize(image_point_type) will work for any class with .x and .y
+// (smarter templating would allow that for .x/.y/.z as well :-/
+
    
 
 // We could differentiate the type of the normalizers vs the coefficients, but
@@ -316,45 +352,55 @@ class RPC {
       return init(istr);
    }
 
+   // ground_coord_type is always double   
+   ground_coord_type normalize(const ground_coord_type& gp) {
+      ground_coord_type gp1;
+      gp1.x = (gp.x - off_scl[OFFX]) / off_scl[SCLX];
+      gp1.y = (gp.y - off_scl[OFFY]) / off_scl[SCLY];
+      gp1.z = (gp.z - off_scl[OFFZ]) / off_scl[SCLZ];
+      return gp1; // -1-->1 range
+   }
+
+   template <typename IT> // ips could be float or double
+   IT normalize(const IT& ip) {
+      IT ip1;
+      ip1.x = (ip.x - off_scl[OFFS]) / off_scl[SCLS];
+      ip1.y = (ip.y - off_scl[OFFL]) / off_scl[SCLL];
+      return ip1;
+   }
+
+   ground_coord_type
+   denormalize(const ground_coord_type& gp1) { // -1-->1 range
+      ground_coord_type gp;
+      gp.x = gp1.x * off_scl[SCLX] + off_scl[OFFX];
+      gp.y = gp1.y * off_scl[SCLY] + off_scl[OFFY];
+      gp.z = gp1.z * off_scl[SCLZ] + off_scl[OFFZ];
+      return gp;
+   }
+
+   template <typename IT>
+   IT denormalize(const IT& ip1) {
+      IT ip;
+      ip.x = ip1.x * off_scl[SCLS] + off_scl[OFFS];
+      ip.y = ip1.y * off_scl[SCLL] + off_scl[OFFL];
+      return ip;
+   }
+   
+
    template<typename GT, typename IT>
    void
    g2i(GT& gp, IT& ip)
    {
-      llh2sl(off_scl, coeffs,
-             gp[0], gp[1], gp[2],
-             ip[0], ip[1]);
+      GT gp1 = normalize(gp);
+      IT ip1;
+      xyz2xy(coeffs,
+             gp1.x, gp1.y, gp1.z,
+             ip1.x, ip1.y);
+      ip = denormalize(ip1);
    }
 }; // class RPC
 
 }; // namespace RPC
    
-
-// for ground points we will always use double precision
-class ground_coord_type {
- public:
-   double x,y,z;
-   ground_coord_type(double xx=0, double yy=0, double zz=0)
-      : x(xx), y(yy), z(zz) { ; }
-   double& operator[](int i) {
-      switch(i) { case 0: return x;
-                  case 1: return y;
-                  case 2: return z; }
-      return x; // shouldn't ever happen
-   }
-};
-
-// for image points, maybe double, maybe float.  double is of course sufficient
-// precision, but float should be 7 decimal digits precise almost always, which
-// is right on the edge of sufficient for satellite imagery, with precision like
-// 99999.01 is good, but 100000.1 marginal
-template <typename T>
-class image_coord_type {
- public:
-   T x,y;
-   image_coord_type(T xx=0, T yy=0) : x(xx), y(yy) { ; }
-   T& operator[](int i) { return (i ? y : x); }
-};
-typedef image_coord_type<double> imaged_coord_type;
-typedef image_coord_type<float>  imagef_coord_type;
 
 #endif

@@ -156,7 +156,7 @@ test_files(const std::string& ext = "")
 TEST(RPC, g2iCorners) {
    auto bases = test_files();
    for (const auto& base : bases) {
-      cout << "Testing: " << base << endl;
+      //cout << "Testing: " << base << endl;
       RPC<double> rpc;
       errorType e = rpc.init(base+".RPB");
       ASSERT_SUCCESS(e);
@@ -269,26 +269,63 @@ TEST(RPC, doubleVSfloat) {
       for (const auto& gp1 : gps) {
          imagef_coord_type ipf;
          imaged_coord_type ipd;
-         ground_coord_type gp = gp1;
-         gp.x = gp1.x*rpcd.off_scl[SCLX] + rpcd.off_scl[OFFX];
-         gp.y = gp1.y*rpcd.off_scl[SCLY] + rpcd.off_scl[OFFY];
-         gp.z = gp1.z*rpcd.off_scl[SCLZ] + rpcd.off_scl[OFFZ];
+         ground_coord_type gp = rpcd.denormalize(gp1);
          
          rpcf.g2i(gp, ipf);
          rpcd.g2i(gp, ipd);
          EXPECT_NEAR(ipd.x, ipf.x, 1.0); // some differ by 0.9
          EXPECT_NEAR(ipd.y, ipf.y, 1.0);
 
-         csv << "RPC_D_VS_F" >> ipf.x >> ipf.y >> ipd.x >> ipd.y << std::endl;
+         //csv << "RPC_D_VS_F" >> ipf.x >> ipf.y >> ipd.x >> ipd.y << std::endl;
       }
    }
 }
 
 
 TEST(RPC, i2g_dlt) {
+   auto bases = test_files(".RPB");
    auto gps = random_normalized_gps();
+   commanator csv(std::cout);
 
+   for (const auto& base : bases) {
+      RPC<double> rpc;
+      ASSERT_SUCCESS(rpc.init(base));
 
+      for (const auto& gp1 : gps) {
+         auto gp = rpc.denormalize(gp1);
+         imaged_coord_type ip;
+         rpc.g2i(gp, ip);
+
+         imaged_coord_type ip1 = rpc.normalize(ip);
+         double x,y;
+         i2g_dlt(rpc.coeffs, ip1.x, ip1.y, gp1.z,  x,y);
+
+         ground_coord_type i2g1(x, y, gp1.z);
+         ground_coord_type i2g = rpc.denormalize(i2g1);
+         imaged_coord_type rt;
+         rpc.g2i(i2g, rt);
+
+         double ds = rt.x - ip.x;
+         double dl = rt.y - ip.y;
+         //csv << "I2G" >> base >> ip.x >> ip.y >> rt.x >> rt.y << std::endl;
+
+         // It is expected that error (deviation from rigid pinhole/DLT) will be
+         // greater in the line direction, because a linear detector will be
+         // rigid across, but the line direction will manifest wobble over time
+         // through the scan).
+         double xtol=15, ytol=20;
+         
+         // This is an interesting dataset. One P1BS/M1BS pair has very small
+         // coefficients in line*Coef (except for the Y coeff, indicating close
+         // to DLT/Pinhole) and the other has much larger (more scan-wobble)
+         if (base.find("13DEC28033039") != std::string::npos) {
+            xtol = 50;   // still not too terribly bad
+            ytol = 1500; // YOWZA
+         }
+         EXPECT_LT(fabs(ds), xtol);
+         EXPECT_LT(fabs(dl), ytol);
+      }
+   }
 }
 
 
