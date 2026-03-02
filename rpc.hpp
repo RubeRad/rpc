@@ -133,6 +133,28 @@ xyz2xy(T* coeffs,  // NUM_COEFF_ENUM=80
 
 template<typename T>
 void
+solve2x2(T mat00, T mat01,
+         T mat10, T mat11,
+         T r0,    T r1,
+         T& x0,   T& x1)
+{
+   T det = mat00*mat11 - mat01*mat10;
+   if (det==0.0) {  // for /0 safety, should never happen
+      x0 = x1 = -1e+100;
+      return;
+   }
+
+   T swap = mat00; // swap the diagonals
+   mat00 = mat11;
+   mat11 = swap;
+   mat10 *= -1;    // negate the off-diagonals
+   mat01 *= -1;
+   x0 = (mat00*r0 + mat01*r1) / det;
+   x1 = (mat01*r0 + mat11*r1) / det;
+}
+
+template<typename T>
+void
 i2g_dlt(T* coeffs,      // NUM_COEFF_ENUM=80
         T s, T l, T z,  // input normalized image coords and normalized Z
         T& x,           // solve for normalized ground X
@@ -153,29 +175,8 @@ i2g_dlt(T* coeffs,      // NUM_COEFF_ENUM=80
    // ld + lex + lfy = a + bx + cy ==> (b-le)x + (c-lf)y = ld-a;
    T mat00 = h-s*k,   mat01 = i-s*m,   rhs0 = s*j-g;
    T mat10 = b-l*e,   mat11 = c-l*f,   rhs1 = l*d-a;
-   T det = mat00*mat11 - mat01*mat10; // north-up will be like -1
-   if (det == 0.0) { // Should not happen with well-fitted RPC
-      x = -1e-10;
-      y = -1e-10;
-   } else {
-      // 2x2 inverse of matIJ
-      T swap = mat00;  // swap the diagonals
-      mat00 = mat11;
-      mat11 = swap;
-      mat10 *= -1;    // negate the off-diagonals
-      mat01 *= -1;
-      x = (mat00*rhs0 + mat01*rhs1) / det;
-      y = (mat01*rhs0 + mat11*rhs1) / det;
-#if 0
-      // double-check round-trip back
-      T testl = (a + b*x + c*y) / (d + e*x + f*y); 
-      T tests = (g + h*x + i*y) / (j + k*x + m*y);
-      testl -= l;
-      tests -= s;
-      int stophere=1;
-      stophere++;
-#endif
-   }
+
+   solve2x2(mat00, mat01, mat10, mat11, rhs0, rhs1, x, y);
 }
 
 
@@ -289,6 +290,8 @@ class RPC {
    T off_scl[NUM_OFF_SCL_ENUM];
    // same order as WV RPB file, RPC00B TRE
    T coeffs[NUM_COEFF_ENUM*4]; // 20*4=80
+
+   T gpartials[6]; // 0-2 = ds/dxyz; 3-5 = dl/dxyz
    
    RPC() { ; }
   ~RPC() { ; }
@@ -339,7 +342,9 @@ class RPC {
          // something went wrong!
          return -1;
       }
-   
+
+      initGroundPartials();
+      
       return 0;
    }
 
@@ -352,6 +357,28 @@ class RPC {
       return init(istr);
    }
 
+   
+   void
+   initGroundPartials()
+   {
+      // compute partials for normalized g2i, at center of image on the
+      // assumption they are close enough to good for the whole image they can
+      // be used to guide i2g()=iterative inverse of direct g2i()
+      double x=0, y=0, z=0, s0,l0, sx,lx, sy,ly, sz,lz;
+      double DELTA = 0.1;
+      xyz2xy(coeffs, x, y, z,       s0,l0);
+      xyz2xy(coeffs, x+DELTA, y, z, sx,lx);
+      xyz2xy(coeffs, x, y+DELTA, z, sy,ly);
+      xyz2xy(coeffs, x, y, z+DELTA, sz,lz);
+      gpartials[0] = (sx-s0)/DELTA;
+      gpartials[1] = (sy-s0)/DELTA;
+      gpartials[2] = (sz-s0)/DELTA;
+      gpartials[3] = (lx-l0)/DELTA;
+      gpartials[4] = (ly-l0)/DELTA;
+      gpartials[5] = (lz-l0)/DELTA;
+   }
+
+   
    // ground_coord_type is always double   
    ground_coord_type normalize(const ground_coord_type& gp) {
       ground_coord_type gp1;
@@ -397,6 +424,53 @@ class RPC {
              gp1.x, gp1.y, gp1.z,
              ip1.x, ip1.y);
       ip = denormalize(ip1);
+   }
+
+   
+   // Instead of specifing a tolerance and iterating a dynamic number of times
+   // to meet that tolerance, specify a fixed number of iterations, and output
+   // the resulting residual. Putting this on GPU we want all the parallel i2g
+   // to be taking all the same steps all the time
+   template<typename IT, typename GT>
+   double // output the square-distance, save on unnecessary sqrts()
+   i2g(IT& ip, GT& gp, int its)
+   {
+      // Do all work in normalized space, don't repeatedly scale/unscale
+      gp.x = off_scl[OFFX];
+      gp.y = off_scl[OFFY];
+      GT gp1 = normalize(gp); // just want normalized Z here
+      T z1 = gp1.z;
+
+      // Directly inverting the DLT is iteration 0
+      T x1,y1, s1,l1;
+      i2g_dlt(coeffs, ip.x, ip.y, z1, x1, y1);
+      T d2 = -1.0;
+
+      for (int it=0; it<its; ++it) {
+         // How did we do?
+         xyz2xy(coeffs, x1,y1,z1, s1,l1);
+         T ds = s1-ip.x;
+         T dl = l1-ip.y;
+         d2 = ds*ds + dl*dl;
+         
+         if (it+1 >= its) // all done
+            break;
+
+         // use the nominal whole-image partials to compute a ground step that
+         // will get closer to ip
+         T dx, dy;
+         solve2x2(gpartials[0], gpartials[3],
+                  gpartials[1], gpartials[4],
+                  ds, dl,   dx, dy);
+         x1 += dx;
+         y1 += dy;
+      }
+      
+      gp1.x = x1;
+      gp1.y = y1;
+      // gp1.z = z1; // already
+      gp = denormalize(gp1);
+      return d2;
    }
 }; // class RPC
 

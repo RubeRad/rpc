@@ -329,6 +329,30 @@ TEST(RPC, i2g_dlt) {
 }
 
 
+TEST(RPC, i2g_fixed_gpartials) {
+   auto bases = test_files(".RPB");
+   auto gps = random_normalized_gps();
+   commanator csv(std::cout);
+
+   for (const auto& base : bases) {
+      RPC<double> rpc;
+      ASSERT_SUCCESS(rpc.init(base));
+
+      for (const auto& gp1 : gps) {
+         auto gp = rpc.denormalize(gp1);
+         imaged_coord_type ip;
+         rpc.g2i(gp, ip);
+
+         ground_coord_type rt;
+         double d2 = rpc.i2g(ip, rt, 5);
+         //EXPECT_LT(d2, 0.001);
+
+
+      }
+   }
+}
+
+
 #if 0
 void test_partials(RPC& rpc, ground_coord_type gp, const string& lbl) {
    cl_double8 prig, pnum;
