@@ -338,16 +338,29 @@ TEST(RPC, i2g_fixed_gpartials) {
       RPC<double> rpc;
       ASSERT_SUCCESS(rpc.init(base));
 
+      // For the "good" two images where i2g_dlt is already very close,
+      // convergence is faster. For the other ones it takes a few more
+      int nits = 3;
+      if (base.find("13DEC28033039") != std::string::npos)
+         nits = 5;   // still not too terribly bad
+      
+
       for (const auto& gp1 : gps) {
          auto gp = rpc.denormalize(gp1);
          imaged_coord_type ip;
          rpc.g2i(gp, ip);
 
          ground_coord_type rt;
-         double d2 = rpc.i2g(ip, rt, 5);
-         //EXPECT_LT(d2, 0.001);
+         rt.z = gp.z; // this is how target z is specified
+         double d2 = rpc.i2g(ip, rt, nits);
+         EXPECT_LT(sqrt(d2), 0.001);
 
-
+         imaged_coord_type ip2;
+         rpc.g2i(rt,ip2);
+         double dx = ip2.x-ip.x;
+         double dy = ip2.y-ip.y;
+         d2 = dx*dx + dy*dy;
+         EXPECT_LT(sqrt(d2), 0.001);
       }
    }
 }

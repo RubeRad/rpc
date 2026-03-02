@@ -59,6 +59,16 @@ enum coeff_enum {
    NUM_COEFF_ENUM
 };
 
+enum partial_enum {
+   DS_DX=0, 
+   DS_DY,
+   DS_DZ,
+   DL_DX,
+   DL_DY,
+   DL_DZ,
+   NUM_PARTIAL_ENUM
+};
+
    
 // start with functions using fundamental types that can be turned into openCL kernels
 // these values lon,lat,hae,samp,line are all NORMALIZED
@@ -370,12 +380,12 @@ class RPC {
       xyz2xy(coeffs, x+DELTA, y, z, sx,lx);
       xyz2xy(coeffs, x, y+DELTA, z, sy,ly);
       xyz2xy(coeffs, x, y, z+DELTA, sz,lz);
-      gpartials[0] = (sx-s0)/DELTA;
-      gpartials[1] = (sy-s0)/DELTA;
-      gpartials[2] = (sz-s0)/DELTA;
-      gpartials[3] = (lx-l0)/DELTA;
-      gpartials[4] = (ly-l0)/DELTA;
-      gpartials[5] = (lz-l0)/DELTA;
+      gpartials[DS_DX] = (sx-s0)/DELTA;
+      gpartials[DS_DY] = (sy-s0)/DELTA;
+      gpartials[DS_DZ] = (sz-s0)/DELTA;
+      gpartials[DL_DX] = (lx-l0)/DELTA;
+      gpartials[DL_DY] = (ly-l0)/DELTA;
+      gpartials[DL_DZ] = (lz-l0)/DELTA;
    }
 
    
@@ -433,44 +443,48 @@ class RPC {
    // to be taking all the same steps all the time
    template<typename IT, typename GT>
    double // output the square-distance, save on unnecessary sqrts()
-   i2g(IT& ip, GT& gp, int its)
+   i2g(IT& ip, // full (non-normalized) pixels samp,line
+       GT& gp, // gp.z must be target HAE
+       int its)
    {
       // Do all work in normalized space, don't repeatedly scale/unscale
-      gp.x = off_scl[OFFX];
-      gp.y = off_scl[OFFY];
-      GT gp1 = normalize(gp); // just want normalized Z here
-      T z1 = gp1.z;
+      IT ip1 = normalize(ip);
+      // just want normalized Z here
+      T z1 = (gp.z - off_scl[OFFZ]) / off_scl[SCLZ];
 
       // Directly inverting the DLT is iteration 0
       T x1,y1, s1,l1;
-      i2g_dlt(coeffs, ip.x, ip.y, z1, x1, y1);
-      T d2 = -1.0;
+      i2g_dlt(coeffs, ip1.x, ip1.y, z1, x1, y1);
+      T ds,dl,dx,dy;
 
       for (int it=0; it<its; ++it) {
          // How did we do?
          xyz2xy(coeffs, x1,y1,z1, s1,l1);
-         T ds = s1-ip.x;
-         T dl = l1-ip.y;
-         d2 = ds*ds + dl*dl;
+         ds = ip1.x - s1;
+         dl = ip1.y - l1;
          
          if (it+1 >= its) // all done
             break;
 
          // use the nominal whole-image partials to compute a ground step that
          // will get closer to ip
-         T dx, dy;
-         solve2x2(gpartials[0], gpartials[3],
-                  gpartials[1], gpartials[4],
-                  ds, dl,   dx, dy);
+
+         // However much dx,dy we choose, this is how much ds,dl we would expect:
+         //    dx * dsdx + dy * dsdy = ds
+         //    dx * dldx + dy * dldy = dl
+         // So solve that 2x2 for how much dx,dy to achieve this ds,dl
+         solve2x2(gpartials[DS_DX], gpartials[DS_DY], // matrix
+                  gpartials[DL_DX], gpartials[DL_DY],
+                  ds, dl,                             // rhs
+                  dx, dy);                            // solve for
          x1 += dx;
          y1 += dy;
       }
       
-      gp1.x = x1;
-      gp1.y = y1;
-      // gp1.z = z1; // already
-      gp = denormalize(gp1);
-      return d2;
+      gp = denormalize(GT(x1,y1,z1));
+      ds *= off_scl[SCLS];
+      dl *= off_scl[SCLL];
+      return (ds*ds + dl*dl);
    }
 }; // class RPC
 
