@@ -253,38 +253,41 @@ g2ipartials(T* coeffs,     // NUM_COEFF_ENUM=80
 }
 
 
-// for ground points we will always use double precision
-class ground_coord_type {
+// for ground points we will always use double precision, but that might be
+// InstrumentedDouble to automatically count flops
+template <typename T>
+class gnd_coord_type {
  public:
-   double x,y,z;
-   ground_coord_type(double xx=0, double yy=0, double zz=0)
+   T x,y,z;
+   gnd_coord_type(T xx=0, T yy=0, T zz=0)
       : x(xx), y(yy), z(zz) { ; }
-   double& operator[](int i) {
+   T& operator[](int i) {
       switch(i) { case 0: return x;
                   case 1: return y;
                   case 2: return z; }
       return x; // shouldn't ever happen
    }
 };
+typedef gnd_coord_type<double> ground_coord_type;
 
 // for image points, maybe double, maybe float.  double is of course sufficient
 // precision, but float should be 7 decimal digits precise almost always, which
 // is right on the edge of sufficient for satellite imagery, with precision like
 // 99999.01 is good, but 100000.1 marginal
 template <typename T>
-class image_coord_type {
+class img_coord_type {
  public:
    T x,y;
-   image_coord_type(T xx=0, T yy=0) : x(xx), y(yy) { ; }
+   img_coord_type(T xx=0, T yy=0) : x(xx), y(yy) { ; }
    T& operator[](int i) { return (i ? y : x); }
 };
-typedef image_coord_type<double> imaged_coord_type;
-typedef image_coord_type<float>  imagef_coord_type;
+typedef img_coord_type<double> imaged_coord_type;
+typedef img_coord_type<float>  imagef_coord_type;
 
 
 
 // NOTE: the classes ground_coord_type is only before class RPC because of
-// [de]normalize(ground_point_type); The templated
+// [de]normalize(ground_coord_type); The templated
 // [de]normalize(image_point_type) will work for any class with .x and .y
 // (smarter templating would allow that for .x/.y/.z as well :-/
 
@@ -389,9 +392,10 @@ class RPC {
    }
 
    
-   // ground_coord_type is always double   
-   ground_coord_type normalize(const ground_coord_type& gp) {
-      ground_coord_type gp1;
+   // ground_coord_type is always double
+   template <typename GT>
+   gnd_coord_type<GT> normalize(const gnd_coord_type<GT>& gp) {
+      gnd_coord_type<GT> gp1;
       gp1.x = (gp.x - off_scl[OFFX]) / off_scl[SCLX];
       gp1.y = (gp.y - off_scl[OFFY]) / off_scl[SCLY];
       gp1.z = (gp.z - off_scl[OFFZ]) / off_scl[SCLZ];
@@ -406,9 +410,10 @@ class RPC {
       return ip1;
    }
 
-   ground_coord_type
-   denormalize(const ground_coord_type& gp1) { // -1-->1 range
-      ground_coord_type gp;
+   template <typename GT>
+   gnd_coord_type<GT>
+   denormalize(const gnd_coord_type<GT>& gp1) { // -1-->1 range
+      gnd_coord_type<GT> gp;
       gp.x = gp1.x * off_scl[SCLX] + off_scl[OFFX];
       gp.y = gp1.y * off_scl[SCLY] + off_scl[OFFY];
       gp.z = gp1.z * off_scl[SCLZ] + off_scl[OFFZ];
