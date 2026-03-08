@@ -4,6 +4,7 @@
 #include <random>
 
 #include "rpc.hpp"
+#include "InstrumentedDouble.hpp"
 
 #define EXPECT_SUCCESS(x) EXPECT_EQ(0,x)
 #define ASSERT_SUCCESS(x) ASSERT_EQ(0,x)
@@ -365,6 +366,50 @@ TEST(RPC, i2g_fixed_gpartials) {
    }
 }
 
+
+TEST(RPC, verifyInstrumentedDouble) {
+   InstrumentedDouble::reset();
+
+   RPC<InstrumentedDouble> rpc;
+   auto base = test_files()[0];
+   ASSERT_SUCCESS(rpc.init(base+".RPB"));
+
+   std::cout << "INIT " << InstrumentedDouble::MULT_COUNT << " "
+                        << InstrumentedDouble::PLUS_COUNT << std::endl;
+   InstrumentedDouble::reset();
+   
+   vector<ground_coord_type> gcnrs;
+   vector<imaged_coord_type> icnrs;
+   extractCorners(base+".IMD", gcnrs, icnrs);
+
+   for (size_t i=0; i<gcnrs.size(); ++i) {
+      auto gp = gcnrs[i];
+      gnd_coord_type<InstrumentedDouble> gpi(gp.x, gp.y, gp.z);
+      img_coord_type<InstrumentedDouble> ipi;
+      rpc.g2i(gpi, ipi);
+      //std::cout << InstrumentedDouble::MULT_COUNT << " "
+      //<< InstrumentedDouble::PLUS_COUNT << std::endl;
+   }
+   std::cout << "G2I: " << InstrumentedDouble::MULT_COUNT/4 << " "
+                        << InstrumentedDouble::PLUS_COUNT/4 << std::endl;
+   InstrumentedDouble::reset();
+
+   for (int its=0; its<5; ++its) {
+      InstrumentedDouble::reset();
+      for (size_t i=0; i<gcnrs.size(); ++i) {
+         auto gp = gcnrs[i];
+         auto ip = icnrs[i];
+         gnd_coord_type<InstrumentedDouble> gpi(0, 0, gp.z);
+         img_coord_type<InstrumentedDouble> ipi(ip.x, ip.y);
+         rpc.i2g(ipi, gpi, its);
+         //std::cout << InstrumentedDouble::MULT_COUNT << " "
+         //<< InstrumentedDouble::PLUS_COUNT << std::endl;
+      }
+      std::cout << "I2G: " << its << " "
+                << InstrumentedDouble::MULT_COUNT/4 << " "
+                << InstrumentedDouble::PLUS_COUNT/4 << std::endl;
+   }
+}
 
 #if 0
 void test_partials(RPC& rpc, ground_coord_type gp, const string& lbl) {

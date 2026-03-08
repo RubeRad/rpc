@@ -88,7 +88,7 @@ xyz2xy(T* coeffs,  // NUM_COEFF_ENUM=80
    T z( hae );
    T xx=x*x, yy=y*y, zz=z*z, xy=x*y, xz=x*z, yz=y*z;
    
-   T sampn=0, sampd=0, linen=0, lined=0;
+   IT sampn(0), sampd(0), linen(0), lined(0);
    // accumulate in reverse order, adding smallest terms first
    for (int i=19; i>=0; --i) {
       T term;
@@ -123,7 +123,8 @@ xyz2xy(T* coeffs,  // NUM_COEFF_ENUM=80
 
    // for well-fitted RPC reasonably in the image domain, the denominators
    // should never cross 0 (or even go negative)
-   if (sampd == 0 || lined == 0) {
+   static T ZERO(0);
+   if (sampd == ZERO || lined == ZERO) {
       samp = -1e10;
       line = -1e10;
    } else {
@@ -377,8 +378,7 @@ class RPC {
       // compute partials for normalized g2i, at center of image on the
       // assumption they are close enough to good for the whole image they can
       // be used to guide i2g()=iterative inverse of direct g2i()
-      double x=0, y=0, z=0, s0,l0, sx,lx, sy,ly, sz,lz;
-      double DELTA = 0.1;
+      T x(0), y(0), z(0), s0,l0, sx,lx, sy,ly, sz,lz, DELTA(0.1);
       xyz2xy(coeffs, x, y, z,       s0,l0);
       xyz2xy(coeffs, x+DELTA, y, z, sx,lx);
       xyz2xy(coeffs, x, y+DELTA, z, sy,ly);
@@ -447,7 +447,7 @@ class RPC {
    // the resulting residual. Putting this on GPU we want all the parallel i2g
    // to be taking all the same steps all the time
    template<typename IT, typename GT>
-   double // output the square-distance, save on unnecessary sqrts()
+   T // output the square-distance, save on unnecessary sqrts()
    i2g(IT& ip, // full (non-normalized) pixels samp,line
        GT& gp, // gp.z must be target HAE
        int its)
