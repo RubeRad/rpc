@@ -5,6 +5,7 @@
 
 #include "rpc.hpp"
 #include "InstrumentedDouble.hpp"
+#include "rpc_ocv.h"
 
 #define EXPECT_SUCCESS(x) EXPECT_EQ(0,x)
 #define ASSERT_SUCCESS(x) ASSERT_EQ(0,x)
@@ -410,6 +411,20 @@ TEST(RPC, verifyInstrumentedDouble) {
                 << InstrumentedDouble::PLUS_COUNT/4 << std::endl;
    }
 }
+
+
+TEST(RPC, fitBetterDlt) {
+   auto bases = test_files(".RPB");
+   for (const auto& base : bases) {
+      RPC<double> rpc;
+      ASSERT_SUCCESS(rpc.init(base));
+
+      double dlt_coeff[11];
+      double rms = fit_dlt(rpc, dlt_coeff);
+      EXPECT_GT(rms, 0.0);
+   }
+}
+
 
 #if 0
 void test_partials(RPC& rpc, ground_coord_type gp, const string& lbl) {
